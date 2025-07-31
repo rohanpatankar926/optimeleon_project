@@ -85,11 +85,7 @@ curl -X POST "http://localhost:8000/generate-headline" \
 Once the server is running, visit:
 - Swagger UI: `http://localhost:8000/docs`
 - ReDoc: `http://localhost:8000/redoc`
-
-## Customization
-- **Image Analysis:** Modify `analyze_image()` in `image_analysis.py` to use different models (e.g., Google Vision API, CLIP).
-- **Text Generation:** Modify `generate_headline_subheadline()` in `text_gen.py` to use different LLMs (e.g., LLaMA, Claude).
-
+  
 ## Technologies Used
 - **FastAPI:** Web framework
 - **HuggingFace Transformers:** BLIP model for image captioning
@@ -103,8 +99,3 @@ The API includes comprehensive error handling:
 - Malformed JSON
 - Missing required fields
 - Model/API failures (with fallbacks)
-
----
-
-**Optimeleon AI Engineer Challenge Solution** # optimeleon_project
-# optimeleon_project
