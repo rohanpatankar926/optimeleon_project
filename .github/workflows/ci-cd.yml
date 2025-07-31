@@ -1,0 +1,90 @@
+name: Build and Push api to AKS cluster prod
+
+on:
+  push:
+    branches:
+      - main
+
+
+env:
+  AZURE_CONTAINER_REGISTRY: registry
+  PROJECT_NAME: optimeleon-api
+  RESOURCE_GROUP: ml-backend
+  REGISTRY_URL: registry.azurecr.io
+  CLUSTER_NAME: optimeleon-k8s-cluster
+
+
+jobs:
+    continuous-integration:
+        runs-on: self-hosted
+        steps:
+        - name: 'Checkout GitHub Action'
+          uses: actions/checkout@main
+          with:
+            submodules: recursive
+            token: ${{ secrets.GH_TOKEN }}
+  
+        - name: Clone submodule
+          run: |
+            git submodule update --init --recursive
+
+        - name: 'Login via Azure CLI'
+          uses: azure/login@v1
+          with:
+            creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+        - name: keep last two version docker
+          run: |
+            chmod +x ./keep_last_3_docker_version.sh
+            ./keep_last_3_docker_version.sh ${{ env.AZURE_CONTAINER_REGISTRY }} ${{ env.PROJECT_NAME }}
+
+        - name: azure docker login
+          run: |
+            docker login ${{ env.REGISTRY_URL }} --username ${{ env.AZURE_CONTAINER_REGISTRY }} --password ${{ secrets.REGISTRY_PASSWORD }}
+            docker build -t ${{ env.REGISTRY_URL }}/${{ env.PROJECT_NAME }}:latest .
+            docker push ${{ env.REGISTRY_URL }}/${{ env.PROJECT_NAME }}:latest
+            docker tag ${{ env.REGISTRY_URL }}/${{ env.PROJECT_NAME }}:latest ${{ env.REGISTRY_URL }}/${{ env.PROJECT_NAME }}:${{ github.sha }}
+            docker push ${{ env.REGISTRY_URL }}/${{ env.PROJECT_NAME }}:${{ github.sha }}
+            
+    continuous-deployment:
+      needs: continuous-integration
+      runs-on: self-hosted
+      steps:
+        - name: 'Login via Azure CLI'
+          uses: azure/login@v1
+          with:
+            creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+        - name: Checkout
+          uses: actions/checkout@v2
+        
+        - name: Azure login
+          id: login
+          uses: azure/login@v1.4.3
+          with:
+            creds: ${{ secrets.AZURE_CREDENTIALS }}
+        
+        - name: Set AKS context
+          id: set-context
+          uses: azure/aks-set-context@v3
+          with:
+            resource-group: '${{ env.RESOURCE_GROUP }}' 
+            cluster-name: '${{ env.CLUSTER_NAME }}'
+        
+        - name: Install Azure CLI
+          run: |
+            az aks install-cli
+
+        - name: Setup kubectl
+          id: install-kubectl
+          uses: azure/setup-kubectl@v3
+      
+        - name: Deploy to AKS
+          id: deploy-aks
+          uses: Azure/k8s-deploy@v4
+          with:
+            namespace: 'kuberay'
+            manifests: |
+              ./k8s/deployment.yml
+            images: ${{ env.REGISTRY_URL }}/${{ env.PROJECT_NAME }}:${{ github.sha }}
+            pull-images: false

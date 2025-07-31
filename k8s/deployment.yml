@@ -1,0 +1,41 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  namespace: kuberay
+  name: optimeleon-api
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      name: optimeleon-api
+  template:
+    metadata: 
+      namespace: kuberay
+      labels:
+        name: optimeleon-api
+    spec:
+      containers:
+        - name: optimeleon-api
+          image: registry.azurecr.io/optimeleon-api:latest
+          imagePullPolicy: IfNotPresent
+          command:
+            - "bash"
+            - "-c"
+            - "python3 main.py --concurrency 1"
+          envFrom:
+            - secretRef:
+                name: secrets
+              
+      nodeSelector:
+        nodepool: prod-cpu
+      restartPolicy: Always
+      imagePullSecrets:
+        - name: docker-secrets
+
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 25%
+      maxSurge: 25%
+  revisionHistoryLimit: 10
+  progressDeadlineSeconds: 600

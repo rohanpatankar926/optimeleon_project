@@ -1,0 +1,8 @@
+fastapi
+uvicorn[standard]
+python-multipart
+transformers
+Pillow
+openai
+torch
+torchvision 
