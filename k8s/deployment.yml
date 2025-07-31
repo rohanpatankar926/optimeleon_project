@@ -18,10 +18,6 @@ spec:
         - name: optimeleon-api
           image: registry.azurecr.io/optimeleon-api:latest
           imagePullPolicy: IfNotPresent
-          command:
-            - "bash"
-            - "-c"
-            - "python3 main.py --concurrency 1"
           envFrom:
             - secretRef:
                 name: secrets
